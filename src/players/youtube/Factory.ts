@@ -1,3 +1,4 @@
+import { ZuluPlayer } from "../..";
 import { FactoryInterface } from "../../interfaces/player/FactoryInterface";
 import { PlayerInterface } from "../../interfaces/player/PlayerInterface";
 import { ValidatorInterface } from "../../interfaces/player/ValidatorInterface";
@@ -12,7 +13,7 @@ export class Factory implements FactoryInterface {
         return new Validator();
     }
 
-    createPlayer(url: string, containerElement: ShadowRoot): PlayerInterface {
-        return new Player(url, containerElement)
+    createPlayer(url: string, player: ZuluPlayer): PlayerInterface {
+        return new Player(url, player.shadowRoot, player.getAttributes())
     }
 }

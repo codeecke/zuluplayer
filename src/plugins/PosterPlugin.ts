@@ -11,7 +11,7 @@ export class PosterPlugin {
             
             player.shadowRoot.innerHTML = `
             <style>img {cursor: pointer}</style>
-            <img src="${player.getAttribute('poster')}" width="640" height="360" alt="Poster">
+            <img src="${player.getAttribute('poster')}" width="100%" alt="Poster">
             `
             player.shadowRoot.querySelector('img')?.addEventListener('click', () => {
                 player.shadowRoot.innerHTML = '';

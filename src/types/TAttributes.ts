@@ -1,0 +1,1 @@
+export type TAttributes = {[k:string]: string}

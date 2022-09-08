@@ -3,6 +3,8 @@ import { Helper } from "./Helper";
 import {YoutubeAPIHelper} from './YoutubeAPIHelper'
 import {PlayerInterface as YTPlayerInterface} from './APIInterface'
 import { Observable } from "../../libs/Observable";
+import { ZuluPlayer } from "../..";
+import { TAttributes } from "../../types/TAttributes";
 
 export class Player implements PlayerInterface {
 
@@ -10,25 +12,36 @@ export class Player implements PlayerInterface {
     private playerReady = new Observable(false);
     private helper = new Helper();
     private apiHelper = new YoutubeAPIHelper();
-
+    
     private _loop: boolean;
     private _autoplay: boolean;
 
-    constructor(url: string, private containerElement: ShadowRoot) {
+    constructor(
+        url: string, 
+        containerElement: ShadowRoot,
+        attributes: TAttributes
+        ) {
+        
         this.apiHelper.implementScriptTag();
         this.apiHelper.onReady(() => {
             console.log('onReady')  
+
             const videoId = this.helper.getVideoId(url);
             containerElement.innerHTML = `<div id="youtube"></div>`
+
+
             this.player = this.apiHelper.createPlayer(
-                this.containerElement.getElementById('youtube'), 
+                containerElement.getElementById('youtube'), 
                 videoId,
                 {
+                    width: '100%',
+                    height: '100%',
                     playerVars: {controls: false},
                     events: {
                         onReady: () => this.playerReady.update(true)
                     }
-                });
+                }
+                );
         });
     }
 
@@ -74,16 +87,6 @@ export class Player implements PlayerInterface {
             this.player.setLoop(this._loop);
         });
         
-    }
-
-    set autoplay(sOnOff: boolean) {
-        this._autoplay = sOnOff;
-
-        this.onReady(() => {
-            if(!this._autoplay) return;
-            this.muted = true;
-            this.play();
-        });
     }
 
     get controls() {

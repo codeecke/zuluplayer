@@ -4,7 +4,7 @@ import {FactoryInterface, PlayerInterface} from './interfaces/player'
 import {PluginConstructorInterface, PluginInterface} from './interfaces/PluginInterface'
 import {Youtube, Vimeo} from './players/players';
 import {PosterPlugin} from './plugins/PosterPlugin'
-import {DemoConsentPlugin} from './plugins/DemoConsentPlugin'
+import {TAttributes} from './types/TAttributes'
 
 type THookList = {
     beforeUrlAnalysis: HookManager,
@@ -61,7 +61,7 @@ export class ZuluPlayer extends HTMLElement implements PlayerInterface {
         if(
             factory.createValidator().validate(url)
             && await this.hook.beforeInitialize.execute()
-        ) return factory.createPlayer(url, this.shadowRoot)
+        ) return factory.createPlayer(url, this)
     }
 
     private async initializePlayer() {
@@ -72,6 +72,14 @@ export class ZuluPlayer extends HTMLElement implements PlayerInterface {
         if(!this.canPlay) return;
         this.autoplay = ['', 'on'].includes(this.getAttribute('autoplay'));
         await this.hook.afterInitialize.execute();
+    }
+
+    getAttributes() {
+        const attributeNames: string[] = this.getAttributeNames();
+        const result: TAttributes = {};
+
+        attributeNames.forEach(attributeName => result[attributeName] = this.getAttribute(attributeName));
+        return result;
     }
 
 
