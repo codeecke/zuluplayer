@@ -3,12 +3,13 @@ import {HookManager} from './libs/HookManager'
 import {FactoryInterface, PlayerInterface} from './interfaces/player'
 import {PluginConstructorInterface, PluginInterface} from './interfaces/PluginInterface'
 import {Youtube, Vimeo} from './players/players';
-import {CountdownPlugin} from './plugins/CountdownPlugin'
+import {PosterPlugin} from './plugins/PosterPlugin'
 import {DemoConsentPlugin} from './plugins/DemoConsentPlugin'
 
 type THookList = {
     beforeUrlAnalysis: HookManager,
-    beforeInitialize: HookManager
+    beforeInitialize: HookManager,
+    afterInitialize: HookManager,
 }
 
 
@@ -26,6 +27,7 @@ export class ZuluPlayer extends HTMLElement implements PlayerInterface {
     public readonly hook: THookList = {
         beforeUrlAnalysis: new HookManager(this),
         beforeInitialize: new HookManager(this),
+        afterInitialize: new HookManager(this),
     }
 
     
@@ -68,7 +70,8 @@ export class ZuluPlayer extends HTMLElement implements PlayerInterface {
         );
 
         if(!this.canPlay) return;
-        this.autoplay = ['', 'on'].includes(this.getAttribute('autoplay')) ;
+        this.autoplay = ['', 'on'].includes(this.getAttribute('autoplay'));
+        await this.hook.afterInitialize.execute();
     }
 
 
@@ -175,8 +178,11 @@ export class ZuluPlayer extends HTMLElement implements PlayerInterface {
 
 
 
-
+// Players
 ZuluPlayer.registerPlayer(new Youtube());
 ZuluPlayer.registerPlayer(new Vimeo());
+
+// Plugins
+ZuluPlayer.registerPlugin(PosterPlugin)
 
 window.customElements.define('zulu-player', ZuluPlayer);
