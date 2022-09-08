@@ -2,7 +2,7 @@ import {Registry} from './libs/Registry'
 import {HookManager} from './libs/HookManager'
 import {FactoryInterface, PlayerInterface} from './interfaces/player'
 import {PluginConstructorInterface, PluginInterface} from './interfaces/PluginInterface'
-import {Youtube} from './players/youtube';
+import {Youtube, Vimeo} from './players/players';
 import {CountdownPlugin} from './plugins/CountdownPlugin'
 import {DemoConsentPlugin} from './plugins/DemoConsentPlugin'
 
@@ -11,9 +11,14 @@ type THookList = {
     beforeInitialize: HookManager
 }
 
+
+
+
 export class ZuluPlayer extends HTMLElement implements PlayerInterface {
 
     private player: PlayerInterface | undefined;
+    private _autoplay: boolean = false;
+    private _fullscreen: boolean = false;
     private static factories = new Registry<FactoryInterface>()
     private static plugins = new Registry<PluginConstructorInterface>();
     public type: string | undefined;
@@ -50,6 +55,7 @@ export class ZuluPlayer extends HTMLElement implements PlayerInterface {
 
         const url = this.getAttribute('src');
         this.type = factory.type;
+        console.log(url, factory.type, factory.createValidator().validate(url))
         if(
             factory.createValidator().validate(url)
             && await this.hook.beforeInitialize.execute()
@@ -79,11 +85,16 @@ export class ZuluPlayer extends HTMLElement implements PlayerInterface {
     }
 
     get autoplay() {
-        return this.canPlay && this.player.autoplay;
+        return this.canPlay && this._autoplay;
     }
 
     set autoplay(sOnOff: boolean) {
-        if(this.canPlay) this.player.autoplay = sOnOff;
+        if(!this.canPlay) return;
+        this._autoplay = sOnOff;
+        if(sOnOff) {
+            this.muted = true;
+            this.play();
+        }
     }
 
     get controls() {
@@ -118,13 +129,54 @@ export class ZuluPlayer extends HTMLElement implements PlayerInterface {
         if(this.canPlay) this.player.preload = sOnOff;
     }
 
+    get fullscreen(): boolean {
+        if('fullscreen' in this.player) return this.player.fullscreen;
+        return this._fullscreen;
+    }
+
+    set fullscreen(sOnOff: boolean) {
+        if('fullscreen' in this.player) {
+            this.player.fullscreen = sOnOff;
+            return;
+        }
+        this._fullscreen = sOnOff;
+        if(sOnOff) {
+            type WebKitHTMLElement = {webkitRequestFullscreen: () => void};
+            type MozillaHTMLElement = {mozRequestFullScreen: () => void};
+            type ResistentHTMLElement = WebKitHTMLElement | HTMLElement | MozillaHTMLElement;
+
+            const isModernBrowser = (el: ResistentHTMLElement): el is HTMLElement  => 'requestFullscreen' in el;
+            const isOldWebkit = (el: ResistentHTMLElement): el is WebKitHTMLElement  => 'webkitRequestFullscreen' in el;
+            const isOldFirefox = (el: ResistentHTMLElement): el is MozillaHTMLElement  => 'webkitRequestFullscreen' in el;
+
+            const playerElement = this.shadowRoot.firstChild as ResistentHTMLElement;
+
+            if(isModernBrowser(playerElement)) playerElement.requestFullscreen();
+            else if(isOldFirefox(playerElement)) playerElement.mozRequestFullScreen();
+            else if(isOldWebkit(playerElement)) playerElement.webkitRequestFullscreen();
+            else throw new Error('Fullscreen is not supported for your browser');
+        } else {
+            type TOldFirefox = {mozCancelFullScreen: () => void};
+            type TOldWebkit = {webkitExitFullscreen: () => void};
+            type ResistentDocument = Document | TOldFirefox | TOldWebkit;
+
+            const isOldFirefox = (doc: ResistentDocument): doc is TOldFirefox => 'mozCancelFullScreen' in doc;
+            const isOldWebkit = (doc: ResistentDocument): doc is TOldWebkit => 'webkitExitFullscreen' in doc;
+            const isModernBrowser = (doc: ResistentDocument): doc is TOldWebkit => 'exitFullscreen' in doc;
+            
+            if(isModernBrowser(document)) document.exitFullscreen();
+            else if(isOldFirefox(document)) document.mozCancelFullScreen();
+            else if(isOldWebkit(document)) document.webkitExitFullscreen();
+            else throw new Error('Fullscreen is not supported for your browser');
+        };
+    }
+
 }
 
 
 
 
 ZuluPlayer.registerPlayer(new Youtube());
-ZuluPlayer.registerPlugin(CountdownPlugin);
-ZuluPlayer.registerPlugin(DemoConsentPlugin);
+ZuluPlayer.registerPlayer(new Vimeo());
 
 window.customElements.define('zulu-player', ZuluPlayer);

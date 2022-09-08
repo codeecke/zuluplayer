@@ -6,8 +6,6 @@ export class DemoConsentPlugin {
 
     constructor(player: ZuluPlayer) {
         const isPlayerTypeDefined = (playerType: string | undefined): playerType is string => typeof(playerType) !== 'undefined';
-        const isShadowRootDefined = (shadowRoot: ShadowRoot | null): shadowRoot is ShadowRoot => shadowRoot !== null;
-        
 
         player.hook.beforeInitialize.add(async (player: ZuluPlayer) => new Promise(resolve => {
             if(!isPlayerTypeDefined(player.type)) return resolve(false);
@@ -20,8 +18,7 @@ export class DemoConsentPlugin {
             template.innerHTML = `
             <div>
                 <button>I want to play videos from ${player.type}. I accept that my personal informations are shared with ${player.type}.</button>
-            </div>
-            `;
+            </div>`;
 
             player.shadowRoot.appendChild(template.content.cloneNode(true))
             player.shadowRoot.querySelector('button').addEventListener('click', () => playerPermission.update(true));
