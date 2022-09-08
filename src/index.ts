@@ -1,12 +1,14 @@
 import {Registry} from './libs/Registry'
-import {Hook} from './libs/Hook'
+import {HookManager} from './libs/HookManager'
 import {FactoryInterface, PlayerInterface} from './interfaces/player'
 import {PluginConstructorInterface, PluginInterface} from './interfaces/PluginInterface'
 import {Youtube} from './players/youtube';
 import {CountdownPlugin} from './plugins/CountdownPlugin'
+import {DemoConsentPlugin} from './plugins/DemoConsentPlugin'
 
 type THookList = {
-    initialize: Hook
+    beforeUrlAnalysis: HookManager,
+    beforeInitialize: HookManager
 }
 
 export class ZuluPlayer extends HTMLElement implements PlayerInterface {
@@ -14,9 +16,11 @@ export class ZuluPlayer extends HTMLElement implements PlayerInterface {
     private player: PlayerInterface | undefined;
     private static factories = new Registry<FactoryInterface>()
     private static plugins = new Registry<PluginConstructorInterface>();
+    public type: string | undefined;
 
     public readonly hook: THookList = {
-        initialize: new Hook(this),
+        beforeUrlAnalysis: new HookManager(this),
+        beforeInitialize: new HookManager(this),
     }
 
     
@@ -34,25 +38,28 @@ export class ZuluPlayer extends HTMLElement implements PlayerInterface {
 
         ZuluPlayer.plugins.use(Plugin => new Plugin(this))
 
-        this.initializePlayer();
+        this.hook.beforeUrlAnalysis.execute().then(canExecute => {
+            if(canExecute) this.initializePlayer();
+        });
+        
         
     }
 
-    private async initializePlayer() {
-        if(!await this.hook.initialize.execute()) return;
+    private async findPlayer(factory: FactoryInterface, foundPlayer: PlayerInterface) {
+        if(typeof(foundPlayer) !== 'undefined') return foundPlayer;
 
-        this.player = ZuluPlayer.factories.use((factory: FactoryInterface, foundPlayer: PlayerInterface) => {
-            if(typeof(foundPlayer) !== 'undefined') return foundPlayer;
-            const url = this.getAttribute('src');
-            
-            if(
-                factory
-                .createValidator()
-                .validate(url)
-            ) {
-                return factory.createPlayer(url, this.shadowRoot)
-            }
-        });
+        const url = this.getAttribute('src');
+        this.type = factory.type;
+        if(
+            factory.createValidator().validate(url)
+            && await this.hook.beforeInitialize.execute()
+        ) return factory.createPlayer(url, this.shadowRoot)
+    }
+
+    private async initializePlayer() {
+        this.player = await ZuluPlayer.factories.useAsync(
+            this.findPlayer.bind(this)
+        );
 
         if(!this.canPlay) return;
         this.autoplay = ['', 'on'].includes(this.getAttribute('autoplay')) ;
@@ -118,5 +125,6 @@ export class ZuluPlayer extends HTMLElement implements PlayerInterface {
 
 ZuluPlayer.registerPlayer(new Youtube());
 ZuluPlayer.registerPlugin(CountdownPlugin);
+ZuluPlayer.registerPlugin(DemoConsentPlugin);
 
 window.customElements.define('zulu-player', ZuluPlayer);

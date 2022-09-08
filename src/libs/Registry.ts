@@ -16,4 +16,12 @@ export class Registry<TItem> {
         });
         return result;
     }
+
+    async useAsync<TResultType>(callback: (item: TItem, previousResult: TResultType | undefined) => Promise<TResultType>): Promise<TResultType> {
+        let result: TResultType | undefined = undefined;
+        for(const item of this.items) {
+            result = await callback(item, result)
+        };
+        return result;
+    }
 }

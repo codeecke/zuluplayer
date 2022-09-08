@@ -5,6 +5,9 @@ import { Player } from "./Player";
 import { Validator } from "./Validator";
 
 export class Factory implements FactoryInterface {
+
+    readonly type = 'YouTube'
+
     createValidator(): ValidatorInterface {
         return new Validator();
     }
